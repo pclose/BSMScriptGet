@@ -1,0 +1,63 @@
+<project name="BSMScriptGet" basedir="." default="main">
+
+    <property name="target" value="1.7" />
+    <property name="src.dir" value="../src" />
+    <property name="build.dir" value="../build" />
+    <property name="lib.dir" value="../" />
+    <property name="classes.dir" value="${build.dir}/bin" />
+    <property name="jar.dir" value="${build.dir}/bin" />
+    <property name="lib.dir" value="../" />
+
+    <property name="main-class" value="BSMScriptGet" />
+
+    <path id="classpath">
+        <fileset dir="${lib.dir}" includes="*.jar" />
+    </path>
+
+    <!-- Clearing build folder -->
+    <target name="clean">
+        <delete dir="${build.dir}" />
+    </target>
+
+    <!-- Compiling files from the source folder-->
+    <target name="compile">
+        <mkdir dir="${classes.dir}" />
+        <javac source="${target}" target="${target}" srcdir="${src.dir}" destdir="${classes.dir}">
+            
+            <classpath>
+                <path refid="classpath" />
+            </classpath>
+        </javac>
+        <copy todir="${classes.dir}">
+            <fileset dir="${src.dir}" excludes="**/*.java" />
+        </copy>
+    </target>
+
+    <!--Generating executable jar-->
+    <target name="jar" depends="compile">
+        <mkdir dir="${jar.dir}" />
+        <jar destfile="${jar.dir}/${ant.project.name}.jar">
+            <fileset dir="${classes.dir}" />
+            <zipgroupfileset dir="${lib.dir}" includes="**/*.jar" />
+            <archives>
+                <zips>
+                    <fileset dir="${lib.dir}" includes="**/*.jar" />
+                </zips>
+            </archives>
+            <manifest>
+                <attribute name="Main-Class" value="${main-class}" />
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="run" depends="jar">
+        <java fork="true" jar="${jar.dir}/${ant.project.name}.jar">
+            <classpath>
+                <path refid="classpath" />
+            </classpath>
+        </java>
+    </target>
+
+    <target name="clean-build" depends="clean,jar" />
+    <target name="main" depends="clean,run" />
+</project>
