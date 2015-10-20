@@ -6,7 +6,8 @@
  *  BPM script repository contents.
  *  Running this depends on ojdbc6.jar from Oracle 
  */
-        
+
+
 import oracle.jdbc.pool.OracleDataSource;
 
 import java.io.IOException;
@@ -26,7 +27,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class BSMScriptGet {
-
+    
     private Connection  mgmtDB;
     private Connection  rtsmDB;
     private int         fetch;
@@ -38,13 +39,13 @@ public class BSMScriptGet {
     private ArrayList<BPMScript> apps =            new ArrayList<BPMScript>();
     private HashMap<Integer, ScriptEnt> scripts =  new HashMap<Integer, ScriptEnt>();
     
-    private static String[] type_str = new String[]{
+    private static String[] fetch_str = new String[]{
         "list scripts and their versions (default)",
         "fetch all scripts in use",
         "fetch highest version of scripts in use",
         "fetch highest version of all scripts"
     };
-
+    
     public static void main(String[] args) {
     
         String db = "";
@@ -95,8 +96,8 @@ public class BSMScriptGet {
         System.out.println("Usage: java BSMScriptGet <database> <BSM_MANAGEMENT password> <RTSM_DATA password> [<fetch-option>] [<destination>]");
         System.out.println("<database> format = hostname:1521:bsminstance");
         System.out.println("<fetch-option> = ");
-        for (int i = 0; i < type_str.length; i++)
-            System.out.println(String.format("\t\"%d\" = %s",i,type_str[i]));
+        for (int i = 0; i < fetch_str.length; i++)
+            System.out.println(String.format("\t\"%d\" = %s",i,fetch_str[i]));
         System.out.println("<destination> = relative directory to save zips");
     }
     
@@ -120,7 +121,7 @@ public class BSMScriptGet {
                 System.out.println("querying database");
                 execApp();
                 execAllSR();
-                System.out.println(String.format("starting to: \"%s\"",type_str[fetch]));
+                System.out.println(String.format("starting to: \"%s\"",fetch_str[fetch]));
                 printCurrentAppsAndScripts(true);
                 
             // fetch all scripts in use
@@ -128,7 +129,7 @@ public class BSMScriptGet {
                 System.out.println("querying database");
                 execApp();
                 execAllSR();
-                System.out.println(String.format("starting to: \"%s\"",type_str[fetch]));
+                System.out.println(String.format("starting to: \"%s\"",fetch_str[fetch]));
                 dlScriptsInUse();
                 
             // fetch highest version of scripts in use
@@ -136,14 +137,14 @@ public class BSMScriptGet {
                 System.out.println("querying database");
                 execApp();
                 execAllSR();
-                System.out.println(String.format("starting to: \"%s\"",type_str[fetch]));
+                System.out.println(String.format("starting to: \"%s\"",fetch_str[fetch]));
                 dlScriptsHighestVersionsInUse();
                 
             // fetch highest version of all scripts
             } else if (fetch == 3) {
                 System.out.println("querying database");
                 execAllSR();
-                System.out.println(String.format("starting to: \"%s\"",type_str[fetch]));
+                System.out.println(String.format("starting to: \"%s\"",fetch_str[fetch]));
                 dlScriptsHighestVersions();
                 
             // print usage and exit
@@ -246,10 +247,10 @@ public class BSMScriptGet {
                 ScriptEnt _ = scripts.get(id);
                 
                 // for every script repository entity run an additional query
-                // this adds a new vers
+                // these are script versions
                 scriptVerQ.setInt(1, _.entity_id);
-                // for each record call addVersion() 
                 ResultSet r = scriptVerQ.executeQuery();
+                // for each record call addVersion() 
                 while (r.next()) 
                     _.addVersion(r);
                 
@@ -351,21 +352,13 @@ public class BSMScriptGet {
             
             if (e.is_deleted || !e.app_is_enabled || !e.btf_is_enabled) continue;
             
-            String script_dir = this.destination_name + File.separator + 
-                e.app_name + "-" + e.btf_name;
+            ScriptVer scr_ver = scripts.get(e.crs_script_id).getScriptVer(e.crs_version_id);
             
-            String version_string = scripts.get(e.crs_script_id)
-                .getScriptVer(e.crs_version_id).str;
+            String script_dir, script_filen;
+            script_dir   = this.destination_name + File.separator + e.app_name + File.separator + e.btf_name;
+            script_filen = e.script_name + "_" + scr_ver.str + ".zip";
             
-            System.out.print(String.format(
-                "Saving version %s of %s.zip to %s... ",
-                version_string, e.script_name, script_dir
-            ));
-            
-            if (dlScript(e.crs_script_id, e.crs_version_id, e.script_name, script_dir))
-                System.out.print("Sucess!\n");
-            else
-                System.out.print("Failed\n");
+            dlScript(e.crs_script_id, e.crs_version_id, script_filen, script_dir);
             
         }
         
@@ -383,20 +376,13 @@ public class BSMScriptGet {
             
             if (e.is_deleted || !e.app_is_enabled || !e.btf_is_enabled) continue;
             
-            String script_dir = this.destination_name + File.separator + 
-                e.app_name + "-" + e.btf_name;
-            
             ScriptVer scr_ver = scripts.get(e.crs_script_id).getHighestScriptVer();
             
-            System.out.print(String.format(
-                "Saving version %s of %s to %s... ",
-                scr_ver.str, e.script_name, script_dir
-            ));
+            String script_dir, script_filen;
+            script_dir   = this.destination_name + File.separator + e.app_name + File.separator + e.btf_name;
+            script_filen = e.script_name + "_" + scr_ver.str + ".zip";
             
-            if (dlScript(e.crs_script_id, scr_ver.id, e.script_name, script_dir))
-                System.out.print("Sucess!\n");
-            else
-                System.out.print("Failed\n");
+            dlScript(e.crs_script_id, scr_ver.id, script_filen, script_dir);
             
         }
         
@@ -412,22 +398,18 @@ public class BSMScriptGet {
         
         for (ScriptEnt e : scripts.values()) {
             
-            String script_dir = this.destination_name + File.separator + 
-                e.path
-                    .replace("\\root\\","")
-                    .replace("\\",File.separator);
-            
             ScriptVer scr_ver = e.getHighestScriptVer();
             
-            System.out.print(String.format(
-                "Saving version %s of %s to %s... ",
-                scr_ver.str, e.entity_name, script_dir
-            ));
+            String script_dir, script_filen;
+            script_dir = this.destination_name + File.separator + 
+                e.path
+                    .replace("\\root\\","")
+                    .replaceAll("\\\\$","")
+                    .replace("\\",File.separator);
             
-            if (dlScript(e.entity_id, scr_ver.id, e.entity_name, script_dir))
-                System.out.print("Sucess!\n");
-            else
-                System.out.print("Failed\n");
+            script_filen = e.entity_name + "_" + scr_ver.str + ".zip";
+            
+            dlScript(e.entity_id, scr_ver.id, script_filen, script_dir);
             
         }
         
@@ -435,12 +417,21 @@ public class BSMScriptGet {
     
     
     
+    /* dlScriptViaPattern 
+     * TODO: function that handles patterns. proposed syntax:
+     * "^:a:OnlineApp*" -download highest version of all Apps matching pattern
+     * "1.1.1:s:"       -download version 1.1.1 of all scripts
+     * "=:a:"           -download current version of all apps */
+    //private void dlScriptViaPattern(String pattern) {}
+    
+    
+    
     /* dlScript- downloads the script specified from SR_SCRIPT_VER table
      * and then calls saveZipBlob() to save to the file and dir specified */
-    private boolean dlScript(   int     script_id, 
-                                int     script_version_id, 
-                                String  script_name, 
-                                String  dir
+    private void dlScript(  int     script_id, 
+                            int     script_version_id, 
+                            String  script_name, 
+                            String  dir
     ) throws SQLException, Exception {
     
         PreparedStatement scriptBlobQ = mgmtDB.prepareStatement("select "+
@@ -450,13 +441,18 @@ public class BSMScriptGet {
         scriptBlobQ.setInt(2, script_version_id);
         ResultSet rset = scriptBlobQ.executeQuery();
         
-        return saveZipBlob(dir, script_name, rset);
-    
+        System.out.print("Saving "+ dir + File.separator + script_name + " ...");
+            
+        if (saveZipBlob(dir, script_name, rset))
+            System.out.print("Sucess!\n");
+        else
+            System.out.print("Failed\n");
+            
     }
     
     
     
-    /* saveZipBlob- saves the BLOB content of a SR_SCRIPT_VER query to a .zip file
+    /* saveZipBlob- saves the BLOB content of a SR_SCRIPT_VER query to a file
      * */
     private boolean saveZipBlob(String dir, String script_name, ResultSet rset) {
         try {
@@ -467,7 +463,7 @@ public class BSMScriptGet {
                 InputStream in = rset.getBinaryStream(1);
                 
                 String output_file_str = destination + 
-                    File.separator + script_name + ".zip";
+                    File.separator + script_name;
                 File output_file = new File(output_file_str);
                 
                 OutputStream out = new FileOutputStream(output_file);
@@ -513,6 +509,9 @@ public class BSMScriptGet {
     
     
     
+     /* TODO: adjust BPMScript and ScriptEnt classes to inherit from one class. 
+      *should make the code easier to extend */
+      
     /* BPMScript - this class corresponds to a record in the EUMBPM_SCRIPTS table
      * stores references to data from the RTSM_DATA schema */
     private class BPMScript {

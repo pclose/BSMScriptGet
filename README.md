@@ -2,16 +2,18 @@
 ------------
 This program connects to an Oracle based HP BSM management database and 
 retrieves or lists the BPM script repository contents.
-Running this depends on ojdbc6.jar from 
+Running this depends on ojdbc6.jar from Oracle.
 
-- 1. Download ojdbc6.jar from [Oracle](http://www.oracle.com/technetwork/apps-tech/jdbc-112010-090769.html).
+1. Download ojdbc6.jar from [Oracle](http://www.oracle.com/technetwork/apps-tech/jdbc-112010-090769.html).
 
-- 2. compile
+2. compile
+    
 ```
   $ javac -cp "./ojdbc6.jar" src/BSMScriptGet.java
 ```
 
-- 3. execute
+3. execute
+    
 ```
   $ java -cp "./ojdbc6.jar:./src" BSMScriptGet
   Usage: java BSMScriptGet <database> <BSM_MANAGEMENT password> <RTSM_DATA password> [<fetch-option>] [<destination>]
@@ -26,6 +28,7 @@ Running this depends on ojdbc6.jar from
 
 Alternatively you could compile using ant. 
 This will also bundle an executable jar under ./build/bin/
+    
 ```
   $ cd ant
   $ ant
