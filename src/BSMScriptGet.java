@@ -305,7 +305,7 @@ public class BSMScriptGet {
         
         System.out.println(
             "Business Application Name"             +sep+
-            "Business Appliction Enabled"           +sep+
+            "Business Application Enabled"          +sep+
             "Business Transaction Flow Name"        +sep+
             "Business Transaction Flow Enabled"     +sep+
             "Deployed Script Version"               +sep+
@@ -527,8 +527,8 @@ public class BSMScriptGet {
         public Boolean  is_deleted;
         
         //rtsm information
-        public String   app_name;
-        public String   btf_name;
+        public String   app_name = "n/a";
+        public String   btf_name = "n/a";
         
         //app and btf ci information
         public Boolean  app_is_enabled;
